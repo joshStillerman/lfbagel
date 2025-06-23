@@ -1,0 +1,52 @@
+target CCPP {
+    cmake-include: ["../inc/cmake-mdsvalue-extras.txt"],
+    keepalive: true,
+    files: ["linear_interpolate.cpp"],
+    clock-sync: on
+}
+
+    preamble {=
+        #include <vector>
+        #include <mdsplus.hpp>
+        using namespace mdsplus;
+    =}
+
+reactor MdsPutSignal(host: string="", 
+                     treename: string="", 
+                     shot:int=-1, 
+                     path: string="", 
+                     first_time:double=0.0, 
+                     segment_length:int = 1) {
+    input time_value : double
+    input signal_value: float
+    state yValues: {= std::vector<float> =}
+    state xValues: {= std::vector<float> =}
+    state tree: {= Tree =};
+    state node: {= TreeNode =};
+    state samplesFilled: int = 0
+
+    input op_start_time:instant_t
+    output value_at_t: float
+
+    reaction(startup) {=
+        self->tree.open(self->treename, self->shot, Mode::Normal);
+        self->node = self->tree.getNode(self->path);
+        self->yValues.reserve(1000);
+        self->xValues.reserve(1000);
+    =}
+    
+    reaction(time_value, signal_value) {=
+        if (time_value->value >= self->first_time) {
+            self->xValues.push_back(time_value->value);
+            self->yValues.push_back(signal_value->value);
+            self->samplesFilled++;
+        }
+    =}
+    reaction(shutdown) {=
+        printf("I am in shutdown writing out the data\n");
+        if (self->samplesFilled > 0) {
+            auto sig = Signal((char *)self->yValues, nullptr, (char *)self->xValues);
+            self->node.putRecord(sig);
+        }
+    =}
+}

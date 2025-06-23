@@ -1,0 +1,56 @@
+target CCPP {
+    keepalive: true,
+    clock-sync: on,
+    files: ["unsigned_char_array_t.h"],
+    cmake-include: ["../inc/cmake-debug-extras.txt"]
+}
+
+import Basler from "Basler.lf"
+import WRTDTrigger from "WRTDTrigger.lf"
+import MdsPutFrame from "MdsPutFrame.lf"
+
+reactor Constant<T>(value: T = {= NULL =}) {
+  output out:   T;
+  reaction(startup) -> out 
+  {= lf_set(out, self->value); =}
+}
+
+main reactor BaslerTest2{
+  state thread_id: lf_thread_t = 0
+  physical action shutItDown(100 msec)
+
+  preamble {=
+    // Schedule an event roughly every 200 msec.
+    void* external(void* a) {
+      printf("Press RETURN to continue...");
+      getchar();  // Waits for user to press Enter
+      lf_schedule(a, 0);
+      return (void *)0;
+    }
+    #include "unsigned_char_array_t.h"
+  =}
+
+
+  timer t(0, 1 sec)
+
+  trig = new WRTDTrigger(event_name="fred");
+  camera = new Basler(tree_name="josh", shot=1, path="\\top.KNOBS");
+  width = new Constant<int>( value = 640 );
+  height = new Constant<int>( value = 480 );
+  writer = new MdsPutFrame(host="", treename="josh", shot=1, path="\\JOSH::TOP:DUMMY", first_time=-3.0)
+  camera.width_out -> writer.width_in;
+  camera.height_out -> writer.height_in;
+  trig.operation_time -> writer.op_start_time;
+  camera.frame_out -> writer.frame_in
+
+  reaction(startup) -> shutItDown {=
+    // Start a thread to schedule physical actions.
+    lf_thread_create(&self->thread_id, &external, shutItDown);
+  =}
+
+  reaction(shutItDown) {=
+      lf_request_stop();
+  =}
+
+}
+

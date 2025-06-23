@@ -1,0 +1,58 @@
+target CCPP {
+    cmake-include: ["inc/cmake-mdsvalue-extras.txt"],
+    keepalive: true,
+    files: ["linear_interpolate.cpp"],
+    clock-sync: on
+}
+
+    preamble {=
+        #include <vector>
+        #include <mdsplus.hpp>
+        using namespace mdsplus;
+        float linear_interpolate(const std::vector<float>& x_vals, const std::vector<float>& y_vals, float x);
+    =}
+
+reactor MdsValue(host: string="", tree: string="", shot:int=-1, expression: string="", first_time:double=0.0, delta_time:time=10 msec) {
+    input op_start_time:instant_t
+    output value_at_t: float;
+    output time_for_value: double;
+    state yValues: {= std::vector<float> =}
+    state xValues: {= std::vector<float> =}
+    state isScalar: int = 0
+    state eventTime: time 
+    timer t(0, delta_time)
+    reaction(startup) {=
+        Tree tree(self->tree, self->shot, Mode::ReadOnly);
+        auto signal = tree.getNode(self->expression).getData<Signal>();
+        self->yValues = signal.getValue<Float32Array>().getValues();
+        self->xValues = signal.getDimensionAt<Float32Array>(0).getValues();
+        self->isScalar == (self->yValues.size() == 1);
+    =}
+
+    initial mode Idle {
+        reaction(op_start_time) -> Active {=
+            printf("got an op_start_time with value %ld\n", op_start_time->value);
+            self->eventTime = op_start_time->value; 
+            lf_set_mode(Active);
+        =}
+        reaction(t) -> value_at_t,time_for_value {=
+            printf("idle - %ld setting value_at_t ( %f ) to %f\n", lf_time_logical(), self->first_time, self->yValues.front());
+            lf_set(value_at_t, self->yValues.front());
+            lf_set(time_for_value, (double)self->first_time);
+        =}
+    }
+
+    mode Active {
+        reaction(t) -> value_at_t, time_for_value {=
+            float ans;
+            double experiment_time = (lf_time_logical() - self->eventTime) * 1E-9;
+            if (self->isScalar)
+                ans = self->yValues[0];
+            else
+                ans = linear_interpolate(self->xValues, self->yValues, experiment_time);
+            lf_set(value_at_t, ans);
+            lf_set(time_for_value, experiment_time);
+        =}
+    }
+
+}

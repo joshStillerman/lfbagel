@@ -1,0 +1,8 @@
+{
+    "recommendations": [
+        "mrmomo.meson-build",
+        "asabil.meson",
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools"
+    ]
+}

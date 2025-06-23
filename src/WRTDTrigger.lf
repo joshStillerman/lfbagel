@@ -1,0 +1,69 @@
+//
+// WIP -
+//   x make the cmake-operation-time-extras.txt git fetch wrtdListen
+//   x add what is needed to get the h in the right place
+//
+//   - look at times printed and figure out the expression
+//   - set the output to the expression in the timer reaction
+//
+target CCPP {
+    keepalive: true,
+    cmake-include: ["../inc/cmake-operation-time-extras.txt"],
+    clock-sync: on
+}
+
+reactor WRTDTrigger(event_name: string="") {
+
+  // Define a function which will trigger the physical action
+  // That sets the operation_event_time
+
+    output operation_time: instant_t;
+    logical action eventRecieved : time ;
+    state thread_id: lf_thread_t = 0
+
+  preamble {=
+      #include <string.h>
+      #include <wrtdListen.h>
+      #include "platform.h" // Defines lf_sleep() and thread functions.
+
+      char *event_name;
+
+      void* dispatch_listen(void* eventRecieved) {
+          double delay = 0;
+          printf("the event name is %s\n", event_name);
+          double event_time = wrtdGetTime("224.0.23.159", 5044, event_name, 60, delay, 37, 1);
+          instant_t ev_ns = (instant_t)(event_time * 1E9);
+          instant_t *ev_ns_ptr = (instant_t *)calloc(1, sizeof(instant_t));
+          *ev_ns_ptr = (instant_t)(event_time * 1E9);
+//          lf_set(operation_time, ev_ns);
+          printf("The event %s corresponds to %ld\n", event_name, *ev_ns_ptr);
+          lf_schedule_value(eventRecieved, 0, ev_ns_ptr, sizeof(instant_t));
+          return (void *)0;
+      }
+  =}
+
+//    reaction(startup) -> eventListen {=
+    reaction(startup) -> eventRecieved, operation_time {=
+        lf_set(operation_time, (instant_t)0);
+        event_name = strdup(self->event_name);
+        lf_thread_create(&self->thread_id, &dispatch_listen, eventRecieved);
+    =}
+
+    reaction(eventRecieved) -> operation_time {=
+        printf("GOT THE EVENT\n");
+        lf_set(operation_time, (instant_t)eventRecieved->value);
+    =}
+//    reaction(eventListen) -> operation_time  {=
+//        double delay = 0;
+//        printf("the event name is %s\n", self->event_name);
+//        double event_time = wrtdGetTime("224.0.23.159", 5044, self->event_name, 60, delay, 37, 1);
+//        instant_t ev_ns = (instant_t)(event_time * 1E9);
+//        lf_set(operation_time, ev_ns);
+//        printf("The event %s corresponds to %ld\n", self->event_name, eventListen->value);
+//   =}
+
+    reaction(shutdown) {=
+//        free(event_name);
+        printf("WRTDTrigger is all done\n");
+    =}
+}

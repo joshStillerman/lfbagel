@@ -1,0 +1,49 @@
+target CCPP {
+    cmake-include: ["../inc/cmake-current-extras.txt"],
+    keepalive: true,
+    files: ["ADS1X15.h", "i2c.h"],
+//    coordination: decentralized,
+    clock-sync: true
+}
+
+reactor Current {
+        preamble {=
+            #define _GNU_SOURCE
+            #include <unistd.h>
+            #include <stdint.h>
+            #include "ADS1X15.h"
+            #include "i2c.h"
+            #define POLARITY -1
+            #define CURRENT_CHANNEL 1
+            void * adc;
+            i2c bus;
+
+            static void start_read_current(void)
+            {
+                Adafruit_ADS1115_startADC_SingleEnded(adc, CURRENT_CHANNEL);
+            }
+
+            static float get_current(void)
+            {
+                float volts;
+                volts = Adafruit_ADS1115_computeVolts(adc, Adafruit_ADS1115_getLastConversionResults(adc));
+                return POLARITY * 10 * (volts - 2.5) ;
+            }
+  =}
+
+    output current : float
+    timer t(0, 10 ms)
+  reaction(startup) {=
+            bus = i2c_open("/dev/i2c-1");
+
+            adc = Adafruit_ADS1115_new();
+            Adafruit_ADS1115_begin(adc, ADS1X15_ADDRESS, bus);
+            Adafruit_ADS1115_setGain(adc, GAIN_ONE); // to 4.096V max
+            start_read_current();
+  =}
+
+  reaction(t) -> current {=
+    lf_set(current, get_current());
+    start_read_current();
+  =}
+}

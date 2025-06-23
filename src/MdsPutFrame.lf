@@ -1,0 +1,122 @@
+target CCPP {
+    cmake-include: ["../inc/cmake-mdsput-extras.txt", "../inc/cmake-debug-extras.txt"],
+    keepalive: true,
+    files: ["unsigned_char_array_t.h.i", "thread_safe_queue.h", "mds_put_frame.h","break.cpp"],
+    clock-sync: on
+}
+
+preamble {=
+        #include <stdio.h>
+        #include <mdsplus.hpp>
+        using namespace mdsplus;
+        #include "unsigned_char_array_t.h.i"
+        #include <memory>
+        #include <thread>
+        #include <thread_safe_queue.h>
+        #include "mds_put_frame.h"
+=}
+
+reactor MdsPutFrame(host: string="", 
+                     treename: string="", 
+                     shot:int=-1, 
+                     path: string="", 
+                     first_time:double=0.0, 
+                     segment_length:int = 1) {
+
+    input op_start_time :instant_t;
+    input frame_in: unsigned_char_array_t*;
+    input width_in: int
+    input height_in: int
+
+    preamble {=
+        #include <vector>
+        #include <mdsplus.hpp>
+        using namespace mdsplus;
+
+        void do_writer(StateStruct *state)
+        {
+            unsigned segLen = 1;
+            auto tree = Tree(state->treename, state->shot_number, Mode::Normal); 
+            auto framesNode = tree.getNode(state->pathname);
+            double frame_time;
+            std::vector<uint8_t> data;
+
+            while (state->is_running || !state->frames.empty())
+            {
+                if (state->frames.empty()) {
+                    // TODO: Delay?
+                    continue;
+                }
+                printf("writing a frame\n");
+                if (!state->is_running) {
+                    printf("Writing remaining %zu frames\n", state->frames.size());
+                }
+
+                Frame * frame = state->frames.pop();
+
+                if (!frame) {
+                    // The reader thread has indicated we should stop
+                    state->is_running = false;
+                    break;
+                }
+                unsigned char *bytes = frame->data.data();
+                size_t total_size = segLen * state->width * state->height;
+                std::vector<uint8_t> byteVector(bytes, bytes + total_size);
+                framesNode.makeSegment(
+                    frame->frame_time,
+                    frame->frame_time+1E-6,
+                    frame->frame_time,
+                    byteVector
+                );
+
+                delete frame;
+            }                                
+            printf("~do_writer\n");
+        }
+
+    =}
+
+    state r_state: {= StateStruct =};
+    reaction(startup, width_in, height_in) {=
+        #include <mdsplus.hpp>
+        using namespace mdsplus;
+        self->r_state.treename = self->treename;
+        self->r_state.pathname = self->path;
+        self->r_state.shot_number = self->shot;
+        self->r_state.width = width_in -> value;
+        self->r_state.height = height_in->value;
+        self->r_state.writer_thread = std::thread(do_writer, &self->r_state);
+    =}
+
+    reaction(width_in, height_in) {=
+       self->r_state.width = (unsigned)width_in->value;
+       self->r_state.height = (unsigned)height_in->value;
+    =}
+
+    reaction(frame_in, op_start_time) {=
+      printf("frame_in %ld, %ld %f self->first_time %f\n", op_start_time->value, lf_time_logical(), (lf_time_logical()-op_start_time->value)*1E-9, self->first_time);
+//      if (frame_in->is_present && (op_start_time->value != 0)) {
+      if (frame_in->is_present && (op_start_time->value != 0)) {
+        printf("\tchecking if %f is > %f\n", (lf_time_logical()-op_start_time->value)*1E-9, self->first_time);
+        if(((lf_time_logical()-op_start_time->value)*1E-9) >= self->first_time) {
+            printf("actually writing one\n"); 
+
+            Frame * frame = new Frame();
+            frame->index = self->r_state.frameIndex;
+            frame->frame_time = (lf_time_logical()-op_start_time->value)*1E-9;
+            frame->data.resize(frame_in->value->length);
+            memcpy(frame->data.data(), frame_in->value->data, frame->data.capacity());
+            self->r_state.frames.push(frame);
+            ++self->r_state.frameIndex;
+        }
+      }
+      else {
+          printf("\tframe in is not present\n");
+      }
+    =}
+    reaction(shutdown) {=
+        printf("MdsPutFrame shutting down\n");
+        self->r_state.is_running = false;
+        self->r_state.writer_thread.join(); 
+    =}
+}

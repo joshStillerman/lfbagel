@@ -1,0 +1,19 @@
+target CCPP {
+    keepalive: true,
+    files: ["linear_interpolate.cpp"],
+    clock-sync: on
+}
+
+import Current from "Current.lf"
+import Heights from "Heights.lf"
+
+reactor Sensors {
+
+  output current : float
+  output[4] heights : uint8_t
+
+  current_r = new Current();
+  heights_r = new Heights();
+  current_r.current -> current;
+  heights_r.heights -> heights;
+}

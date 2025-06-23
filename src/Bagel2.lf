@@ -1,0 +1,33 @@
+target CCPP {
+//  coordination: decentralized,
+  keepalive: true,
+  clock-sync: on
+}
+
+import Magnet from "Magnet.lf"
+import bc2          from "bc2.lf"
+import WRTDTrigger from "WRTDTrigger.lf"
+
+federated reactor Bagel2 {
+  state thread_id: lf_thread_t = 0
+  physical action shutItDown(100 msec)
+
+  preamble {=
+    // Schedule an event roughly every 200 msec.
+    void* external(void* a) {
+      printf("Press RETURN to continue...");
+      getchar();  // Waits for user to press Enter
+      lf_schedule(a, 0);
+      return (void *)0;
+    }
+  =}
+  reaction(shutItDown) {
+       lf_request_stop();
+  }
+
+  magnet = new Magnet() at jas@bagelpi.psfc.mit.edu;
+  trigger = new WRTDTrigger(event_name="BAGEL_LF_START");
+  controller = new bc2();
+  trigger.operation_time -> controller.op_start_time
+  controller.demand_out -> magnet.demand 
+}

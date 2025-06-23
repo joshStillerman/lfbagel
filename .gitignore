@@ -1,0 +1,48 @@
+HEAD
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+.cache
+build
+builddir
+unused/ST_VL6180X_API
+
+fed-gen
+bin
+*.log
+
+src-gen
+
+*_[0-9]*.tree
+*_[0-9]*.datafile
+*_[0-9]*.characteristics
+shotid.sys

@@ -1,0 +1,81 @@
+target CCPP {
+    cmake-include: ["../inc/cmake-magnet-extras.txt"],
+    files: ["ibt2_c.h", "i2c.h", "pca9685.c", "pca9685.h", "tiny_gpio.h"],
+    keepalive: true,
+//    coordination: decentralized,
+    clock-sync: on
+}
+
+reactor Magnet {
+        preamble {=
+            #define _GNU_SOURCE
+            #include <unistd.h>
+            #include <stdint.h>
+            #include "ibt2_c.h"
+            #include "i2c.h"
+            #include "tiny_gpio.h"
+            #define POLARITY -1
+            #define CURRENT_CHANNEL 1
+            #define TIMEOUT_NS 30000000 // 30 ms
+
+            void * magnet;
+            i2c bus;
+            bool powered_up = false;
+            float magnet_demand = 0.0;
+            instant_t last_time = 0;
+            PCA9685 pwm;
+            void shutdown_magnet() {
+                 printf("shutting down magnet\n");
+                 IBT2_setDutyCycle(magnet, 0.0);
+                 IBT2_disable(magnet);
+            }
+  =}
+
+    input demand : float
+    timer t(0, 5 ms)
+
+  reaction(startup) {=
+            bus = i2c_open("/dev/i2c-1");
+            pwm = PCA9685_init(bus, 0x40);
+            PCA9685_setFreq(pwm, 1500);
+            magnet = IBT2_new(pwm, SIGN_MAGN_LO, 1, 0, 3, 2);
+            gpioInitialise();
+            gpioSetMode(12, PI_OUTPUT);
+            IBT2_enable(magnet);
+  =}
+
+  reaction(shutdown) {=
+      printf("SHUTTING DOWN\n");
+      shutdown_magnet();
+  =}
+
+  reaction(t) {=
+        printf("Magnet check watchdog at %lu\n", lf_time_physical());
+        if (last_time > 0) {
+             if ((lf_time_physical() - last_time) > TIMEOUT_NS) {
+                printf("WATCHDOG STOP\n");
+                lf_request_stop();
+            }
+        }
+  =}
+
+  reaction(demand) {=
+        printf("Magnet got demand %f at logical time %lu, physical time %lu\n", 
+                demand->value, lf_time_logical(), lf_time_physical());
+        instant_t current_time = lf_time_physical();
+        if (last_time > 0) {
+            if ((lf_time_physical() - last_time) > TIMEOUT_NS) {
+                printf("DEMAND STOP\n");
+                lf_request_stop();
+            }
+        }
+        last_time = lf_time_physical();
+        gpioWrite(12, 1);           // end the timing pulse.. (up)
+        IBT2_setDutyCycle(magnet, demand->value);
+
+        const struct timespec t200_us = { 0, 200000};
+        nanosleep(&t200_us, NULL);
+
+        gpioWrite(12, 0);           // start the timing pulse.. (down)
+  =}
+}

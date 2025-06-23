@@ -1,0 +1,74 @@
+target CCPP {
+    keepalive: true,
+    clock-sync: on,
+    cmake-include: ["../inc/cmake-debug-extras.txt"],
+    files:["unsigned_char_array_t.h"]
+}
+
+import WRTDTrigger from "WRTDTrigger.lf"
+import MdsPutFrame from "MdsPutFrame.lf"
+
+
+reactor Constant<T>(value: T = {= NULL =}) {
+  output out:   T;
+  reaction(startup) -> out 
+  {= lf_set(out, self->value); =}
+}
+
+main reactor MdsPutFrameTest{
+  state thread_id: lf_thread_t = 0
+  physical action shutItDown(100 msec)
+
+  preamble {=
+    // Schedule an event roughly every 200 msec.
+    #include "unsigned_char_array_t.h"
+    void* external(void* a) {
+      printf("Press RETURN to continue...");
+      getchar();  // Waits for user to press Enter
+      lf_schedule(a, 0);
+      return (void *)0;
+    }
+  =}
+
+
+  timer t(0, 1 sec)
+
+  trig = new WRTDTrigger(event_name="fred");
+  width = new Constant<int>( value = 640 );
+  height = new Constant<int>( value = 480 );
+  writer = new MdsPutFrame(host="", treename="josh", shot=-1, path="\\JOSH::TOP:DUMMY", first_time=-3.0)
+  width.out -> writer.width_in;
+  height.out -> writer.height_in;
+  trig.operation_time -> writer.op_start_time;
+
+  reaction(startup) -> shutItDown, writer.frame_in {=
+    // Start a thread to schedule physical actions.
+    lf_thread_create(&self->thread_id, &external, shutItDown);
+  
+    lf_set_destructor(writer.frame_in, unsigned_char_array_destructor);
+    lf_set_copy_constructor(writer.frame_in, unsigned_char_array_copy_constructor);
+  =}
+
+  reaction(shutItDown) {=
+      lf_request_stop();
+  =}
+
+
+  reaction(t) -> writer.frame_in {=
+
+        printf("in frame generator\n");
+        unsigned_char_array_t* array =  unsigned_char_array_constructor(640*480);
+        for (size_t i = 0; i < array->length; i++) {
+            array->data[i] = i % 255;
+        }
+        lf_set(writer.frame_in, array);
+
+//      unsigned char frame[640*480];
+//      for (int i=0; i<640*480; i++)
+//         frame[i] = (unsigned char) i % 255;
+//      lf_set_array(writer.frame_in, frame, sizeof(frame));
+//      lf_set(writer.time_in, lf_time_logical()-trig.operation_time->value); 
+  =}
+
+}
+

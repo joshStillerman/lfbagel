@@ -1,0 +1,29 @@
+target CCPP {
+    keepalive: true,
+    clock-sync: on
+}
+
+import WRTDTrigger from "WRTDTrigger.lf"
+import MdsValue from "MdsValue.lf"
+
+reactor Logger {
+preamble {=
+    #include <stdio.h>
+  =}
+  input xtime: instant_t
+  input xval: float
+  reaction(xval, xtime) {=
+    double the_time = (lf_time_logical()-xtime->value)*1E-9;
+    printf("at time %f xval is %f\n", the_time, xval->value);
+  =}
+}
+
+main reactor MdsValueTest{
+  g = new Logger()
+  h = new WRTDTrigger(event_name="fred");
+  f = new MdsValue(host="", tree="bagel", shot=-1, expression="\\BAGEL::TOP.KNOBS:SET_POINT", first_time=-3.0, delta_time = 1 sec)
+  h.operation_time -> f.op_start_time
+  h.operation_time -> g.xtime
+  f.value_at_t -> g.xval
+}
+

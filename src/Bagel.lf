@@ -1,0 +1,49 @@
+target CCPP {
+//  coordination: decentralized,
+  keepalive: true,
+  clock-sync: on
+}
+
+import Magnet from "Magnet.lf";
+import Sensors from "Sensors.lf";
+import bc2          from "bc2.lf";
+import WRTDTrigger from "WRTDTrigger.lf";
+import Basler from "Basler.lf";
+
+federated reactor Bagel {
+/*
+  state thread_id: lf_thread_t = 0
+
+  physical action shutItDown(100 msec)
+
+  preamble {=
+    // Schedule an event roughly every 200 msec.
+    void* external(void* a) {
+      printf("Press RETURN to continue...");
+      getchar();  // Waits for user to press Enter
+      lf_schedule(a, 0);
+      return (void *)0;
+    }
+  =}
+
+
+  reaction(startup) -> shutItDown {=
+    // Start a thread to schedule physical actions.
+    lf_thread_create(&self->thread_id, &external, shutItDown);
+  =}
+
+  reaction(shutItDown) {=
+      lf_request_stop();
+  =}
+*/
+  sensors_r = new Sensors() at jas@bagelpi.psfc.mit.edu;
+  magnet_r = new Magnet() at jas@bagelpi.psfc.mit.edu;
+  trigger = new WRTDTrigger(event_name="BAGEL_LF_START");
+  basler = new Basler(tree="bagel", shot=-1, path=".knobs.camera");
+  controller = new bc2();
+  sensors_r.current -> controller.current_in;
+  sensors_r.heights -> controller.heights_in;
+  trigger.operation_time -> controller.op_start_time
+  controller.demand -> magnet_r.demand 
+}
+

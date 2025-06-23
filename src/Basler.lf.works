@@ -1,0 +1,167 @@
+target CCPP {
+    cmake-include: ["../inc/cmake-basler-extras.txt"],
+    keepalive: true,
+    files: ["unsigned_char_array_t.h.i"],
+    clock-sync: on
+}
+    preamble {=
+        #include <mdsplus.hpp>
+        #include <cstdlib>
+        #include <cstdio>
+        #include <pylon/PylonIncludes.h>
+        #include <pylon/BaslerUniversalInstantCamera.h>
+        #include <pylon/BaslerUniversalImageEventHandler.h>
+        #include "unsigned_char_array_t.h.i"
+        #include <chrono>
+        using namespace Pylon;
+        using namespace mdsplus;
+        using namespace Basler_UniversalCameraParams;
+    =}
+
+
+reactor Basler(tree_name: string="", shot: int=0, path: string="") {
+
+    // Basler camera
+
+    preamble {=
+        class MyImageHandler : public CBaslerUniversalImageEventHandler {
+        public:
+            // Default constructor
+            MyImageHandler() = default;
+            //  the colon thing intializes the member _grab to the argument
+            //  of the constructor
+            MyImageHandler(void *grab)
+                : _grab(grab)
+//              , _other_thing(otherarg)
+            {}
+
+            // Inline copy constructor (implicitly declared, but shown here for clarity)
+            inline MyImageHandler(const MyImageHandler& other)
+            : CBaslerUniversalImageEventHandler(other)
+            {
+                // You could copy additional state here if needed.
+                std::cout << "MyImageHandler copied via inline copy constructor\n";
+            }
+
+            // Assignment operator (also inline)
+            inline MyImageHandler& operator=(const MyImageHandler& other) {
+                CBaslerUniversalImageEventHandler::operator=(other);
+                std::cout << "MyImageHandler assigned via inline operator=\n";
+                return *this;
+            }
+
+            // Override the image‑grab callback
+            virtual void OnImageGrabbed(
+                CBaslerUniversalInstantCamera& camera,
+                const CBaslerUniversalGrabResultPtr& grabResult
+            ) override {
+//                printf("got a frame - cpp\n");
+                if (grabResult->GrabSucceeded()) {
+                    size_t buffer_size = grabResult->GetBufferSize();
+//                    printf("The size of the frame is  %zu\n", buffer_size);
+                    void *buffer = malloc(buffer_size);
+                    memcpy(buffer, grabResult->GetBuffer(), buffer_size);
+                    lf_schedule_value(_grab, 0, buffer, buffer_size);
+                    std::cout << "OnImageGrabbed: Frame #" << grabResult->GetBlockID() << " received\n";
+                } else {
+                    std::cerr << "OnImageGrabbed: Error code " << grabResult->GetErrorCode() << "\n";
+                }
+            }
+        private:
+            void *_grab = NULL;
+        };
+        MyImageHandler *handler1 = NULL;
+        CBaslerUniversalInstantCamera camera;
+        int frame_width;
+        int frame_height;
+    =}
+
+    output width_out: int;
+    output height_out: int;
+    output frame_out:unsigned_char_array_t*;
+    state Width: int;
+    state Height: int;
+    state dt: float;
+    logical action start_grab;
+    physical action grab : {= void * =};
+
+    reaction(startup) -> grab, width_out, height_out, frame_out {=
+//                lf_schedule(grab2, MSEC(1000));
+        lf_set_destructor(frame_out, unsigned_char_array_destructor);
+        lf_set_copy_constructor(frame_out, unsigned_char_array_copy_constructor);
+        PylonInitialize();
+
+        int exitCode = 0;
+        try {
+            // Instantiate handler with the physical action
+            // and register it with the camera
+                Tree tree(self->tree_name, self->shot, Mode::ReadOnly);
+                auto parent = tree.getNode(self->path);
+            // frame_width and frame_height are globals
+                frame_width = parent.getNode(":width").getRecord().getData<int>();
+                frame_height = parent.getNode(":height").getRecord().getData<int>();
+                int offsetX = parent.getNode(":OffsetX").getRecord().getData<int>();
+                int offsetY = parent.getNode(":OffsetY").getRecord().getData<int>();
+                int exposureTimeAbs = parent.getNode(":exposureTime").getRecord().getData<int>();
+                int fps =  parent.getNode(":fps").getRecord().getData<int>();
+                float gainRaw = parent.getNode("rawGain").getRecord().getData<float>();
+                const char * ipAddress = parent.getNode("IpAddress").getRecord().getData<std::string>().c_str();
+                char *exposureMode = "Timed";
+                char *exposureAuto = "Off";
+                char *gainAuto = "Off";
+                int GevIEEE1588 = true;
+                int acquisitionFrameRateEnable = true;
+                lf_set(width_out, frame_width);
+                lf_set(height_out, frame_height);
+            
+                camera.Attach(CTlFactory::GetInstance().CreateFirstDevice());
+                std::cout << "Using device: " << camera.GetDeviceInfo().GetModelName() << "\n";
+                camera.Open();
+                handler1 = new MyImageHandler(grab);
+                camera.RegisterImageEventHandler(handler1, RegistrationMode_Append, Cleanup_None);
+
+                camera.Width = frame_width;
+                camera.Height = frame_height;
+                camera.OffsetX = offsetX;
+                camera.OffsetY = offsetY;
+                camera.ExposureMode = exposureMode;
+                camera.ExposureAuto = exposureAuto;
+                camera.ExposureTimeAbs = exposureTimeAbs;
+                camera.GainAuto = gainAuto;
+                camera.GainRaw = gainRaw;
+                camera.GevIEEE1588 = GevIEEE1588;
+//                camera.AcquisitionMode = AcquisitionMode_Continuous;
+                camera.AcquisitionFrameRateEnable = acquisitionFrameRateEnable;
+                camera.AcquisitionFrameRateAbs = fps;
+                self->dt = int(1./fps*1E9);
+                
+                camera.StartGrabbing( GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera );
+            } catch (const GenericException& e) {
+                // Error handling
+                std::cerr << "An exception occurred: " << e.GetDescription() << "\n";
+                exitCode = 1;
+            }
+            // Start a thread to schedule physical actions.
+//            lf_thread_t thread_id;
+//            lf_thread_create(&thread_id, &external, grab);
+    =}
+
+     reaction(shutdown) {=
+        // Clean up
+        printf("all done now\n");
+        camera.StopGrabbing();
+        camera.DeregisterImageEventHandler(handler1);
+        camera.Close();
+        camera.DetachDevice();
+        delete handler1;
+        PylonTerminate();
+    =}
+    reaction(grab) -> frame_out {=
+
+        printf("XXXXXX got a frame\n");
+        unsigned_char_array_t* array =  unsigned_char_array_constructor(frame_width*frame_height);
+        memcpy((void *)array->data, (const void*)grab->value, array->length);
+        lf_set(frame_out, array);
+    =}
+
+}
