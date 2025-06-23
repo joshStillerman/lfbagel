@@ -1,0 +1,12 @@
+target_sources(${LF_MAIN_TARGET} PRIVATE 
+bagelController1_3.c
+bagelController1_3_capi.c
+bagelController1_3_data.c
+rt_zcfcn.c)
+
+include_directories(/usr/local/MATLAB/R2021b/extern/include
+                    /usr/local/MATLAB/R2021b/simulink/include
+                    /usr/local/MATLAB/R2021b/rtw/c/src
+                    /usr/local/MATLAB/R2021b/rtw/c/ert )
+
+target_compile_options(${LF_MAIN_TARGET} PRIVATE -DTHIS_MODEL_NAME=bagelController1_3)

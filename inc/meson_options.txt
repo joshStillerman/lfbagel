@@ -1,0 +1,1 @@
+option('mdsplus_root', type : 'string', value : '/usr/local/mdsplus', description : 'MDSplus directory')

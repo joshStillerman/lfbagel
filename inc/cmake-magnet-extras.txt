@@ -1,0 +1,2 @@
+target_sources(${LF_MAIN_TARGET} PRIVATE pca9685.c)
+target_link_libraries( ${LF_MAIN_TARGET} PRIVATE /opt/bagelpi/build/src/libIBT2.so )
