@@ -1,0 +1,16 @@
+target CCPP {
+    keepalive: true,
+    clock-sync: on,
+    files: ["unsigned_char_array_t.h"],
+    cmake-include: ["../inc/cmake-debug-extras.txt"]
+}
+
+import Basler from "Basler.lf"
+import WRTDTrigger from "WRTDTrigger.lf"
+import MdsPutFrame from "MdsPutFrame.lf"
+
+reactor Constant<T>(value: T = {= NULL =}) {
+  output out:   T;
+  reaction(startup) -> out
+  {= lf_set(out, self->value); =}
+}

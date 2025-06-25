@@ -15,8 +15,8 @@ reactor bc2 {
 
   output demand: float
 
-  set_point_in = new MdsValue(host="", tree="bagel", shot=-1, expression="\\BAGEL::TOP.KNOBS:SET_POINT", first_time=-3.0, delta_time = 10 msec);
-  phase_in = new MdsValue(host="", tree="bagel", shot=-1, expression="\\BAGEL::TOP.KNOBS:PHASE", first_time=-3.0, delta_time = 10 msec);
+  set_point_in = new MdsValue(host="", tree="lfbagel", shot=0, expression="\\BAGEL::TOP.KNOBS:SET_POINT", first_time=-3.0, delta_time = 10 msec);
+  phase_in = new MdsValue(host="", tree="lfbagel", shot=0, expression="\\BAGEL::TOP.KNOBS:PHASE", first_time=-3.0, delta_time = 10 msec);
   controller_out = new bc()
   op_start_time -> phase_in.op_start_time;
   op_start_time -> set_point_in.op_start_time

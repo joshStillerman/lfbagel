@@ -9,12 +9,6 @@ import Basler from "Basler.lf"
 import WRTDTrigger from "WRTDTrigger.lf"
 import MdsPutFrame from "MdsPutFrame.lf"
 
-reactor Constant<T>(value: T = {= NULL =}) {
-  output out:   T;
-  reaction(startup) -> out 
-  {= lf_set(out, self->value); =}
-}
-
 main reactor BaslerTest{
   state thread_id: lf_thread_t = 0
   physical action shutItDown(100 msec)
