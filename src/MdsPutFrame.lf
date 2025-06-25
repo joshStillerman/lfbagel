@@ -52,7 +52,7 @@ reactor MdsPutFrame(host: string="",
                     printf("Writing remaining %zu frames\n", state->frames.size());
                 }
 
-                Frame * frame = state->frames.pop();
+                Frame *frame = state->frames.pop();
 
                 if (!frame) {
                     // The reader thread has indicated we should stop
@@ -70,44 +70,43 @@ reactor MdsPutFrame(host: string="",
                 );
 
                 delete frame;
-            }                                
+            };
             printf("~do_writer\n");
         }
-
     =}
 
-    state r_state: {= StateStruct =};
+    state r_state: {= StateStruct * =};
     reaction(startup, width_in, height_in) {=
-        #include <mdsplus.hpp>
-        using namespace mdsplus;
-        self->r_state.treename = self->treename;
-        self->r_state.pathname = self->path;
-        self->r_state.shot_number = self->shot;
-        self->r_state.width = width_in -> value;
-        self->r_state.height = height_in->value;
-        self->r_state.writer_thread = std::thread(do_writer, &self->r_state);
+//        #include <mdsplus.hpp>
+//        using namespace mdsplus;
+        self->r_state = new StateStruct();
+        self->r_state->treename = self->treename;
+        self->r_state->pathname = self->path;
+        self->r_state->shot_number = self->shot;
+        self->r_state->width = width_in -> value;
+        self->r_state->height = height_in->value;
+        self->r_state->writer_thread = std::thread(do_writer, self->r_state);
     =}
 
     reaction(width_in, height_in) {=
-       self->r_state.width = (unsigned)width_in->value;
-       self->r_state.height = (unsigned)height_in->value;
+       self->r_state->width = (unsigned)width_in->value;
+       self->r_state->height = (unsigned)height_in->value;
     =}
 
     reaction(frame_in, op_start_time) {=
       printf("frame_in %ld, %ld %f self->first_time %f\n", op_start_time->value, lf_time_logical(), (lf_time_logical()-op_start_time->value)*1E-9, self->first_time);
-//      if (frame_in->is_present && (op_start_time->value != 0)) {
       if (frame_in->is_present && (op_start_time->value != 0)) {
         printf("\tchecking if %f is > %f\n", (lf_time_logical()-op_start_time->value)*1E-9, self->first_time);
         if(((lf_time_logical()-op_start_time->value)*1E-9) >= self->first_time) {
             printf("actually writing one\n"); 
 
             Frame * frame = new Frame();
-            frame->index = self->r_state.frameIndex;
+            frame->index = self->r_state->frameIndex;
             frame->frame_time = (lf_time_logical()-op_start_time->value)*1E-9;
             frame->data.resize(frame_in->value->length);
             memcpy(frame->data.data(), frame_in->value->data, frame->data.capacity());
-            self->r_state.frames.push(frame);
-            ++self->r_state.frameIndex;
+            self->r_state->frames.push(frame);
+            ++self->r_state->frameIndex;
         }
       }
       else {
@@ -116,7 +115,8 @@ reactor MdsPutFrame(host: string="",
     =}
     reaction(shutdown) {=
         printf("MdsPutFrame shutting down\n");
-        self->r_state.is_running = false;
-        self->r_state.writer_thread.join(); 
+        self->r_state->is_running = false;
+        self->r_state->writer_thread.join(); 
+        delete self->r_state;
     =}
 }

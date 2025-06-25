@@ -20,7 +20,7 @@
             std::string pathname;
             int shot_number;
             unsigned frameIndex = 0;
-            thread_safe_queue<Frame *> frames;
+            thread_safe_queue<Frame *> frames = {};
             std::atomic_bool is_running = true;
             std::thread writer_thread;
         } StateStruct;

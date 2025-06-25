@@ -46,3 +46,5 @@ src-gen
 *_[0-9]*.datafile
 *_[0-9]*.characteristics
 shotid.sys
+
+include
