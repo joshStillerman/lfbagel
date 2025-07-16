@@ -1,4 +1,4 @@
-target C {
+target CCPP {
   keepalive: true,
   clock-sync: on,
   cmake-include: ["../inc/cmake-bc-extras.txt"],
@@ -17,7 +17,6 @@ target C {
           "../bc/rt_zcfcn.h",
           "../bc/zero_crossing_types.h"
          ]
-
 }
 
 reactor bc {
@@ -34,7 +33,9 @@ reactor bc {
     preamble {=
         #include <stdio.h>
         #include <string.h>
+        extern "C" {
         #include "bagelController1_3.h"
+        }
         static RT_MODEL_bagelController1_3_T bagelController1_3_M_;
 
         /* 2) actual scratch/state vectors the code expects */
@@ -51,6 +52,7 @@ reactor bc {
        real_T Y_LIFT_COIL_DEMAND;
        real_T Y_X_EST[3];
     =}
+
     reaction(startup) {=
         RT_MODEL_bagelController1_3_T *const bagelController1_3_M = &bagelController1_3_M_;
         bagelController1_3_M->dwork         = &model_DW;

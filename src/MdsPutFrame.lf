@@ -1,18 +1,18 @@
 target CCPP {
-    cmake-include: ["../inc/cmake-mdsput-extras.txt", "../inc/cmake-debug-extras.txt"],
+    cmake-include: ["../inc/cmake-unsigned_char_array_t-extras.txt", "../inc/cmake-mdsput-extras.txt", "../inc/cmake-debug-extras.txt"],
     keepalive: true,
-    files: ["unsigned_char_array_t.h.i", "thread_safe_queue.h", "mds_put_frame.h","break.cpp"],
+    files: ["unsigned_char_array_t.c", "unsigned_char_array_t.h", "thread_safe_queue.h", "mds_put_frame.h","break.cpp"],
     clock-sync: on
 }
 
 preamble {=
-        #include <stdio.h>
-        #include <mdsplus.hpp>
-        using namespace mdsplus;
-        #include "unsigned_char_array_t.h.i"
-        #include <memory>
-        #include <thread>
-        #include <thread_safe_queue.h>
+        #include "unsigned_char_array_t.h"
+//        #include <stdio.h>
+//        #include <mdsplus.hpp>
+//        using namespace mdsplus;
+//        #include <memory>
+//        #include <thread>
+//        #include <thread_safe_queue.h>
         #include "mds_put_frame.h"
 =}
 
@@ -29,8 +29,15 @@ reactor MdsPutFrame(host: string="",
     input height_in: int
 
     preamble {=
-        #include <vector>
+        #include <stdio.h>
+//        #include "unsigned_char_array_t.h"
         #include <mdsplus.hpp>
+        using namespace mdsplus;
+        #include <memory>
+        #include <thread>
+        #include <thread_safe_queue.h>
+//        #include "mds_put_frame.h"
+        #include <vector>
         using namespace mdsplus;
 
         void do_writer(StateStruct *state)
@@ -76,7 +83,7 @@ reactor MdsPutFrame(host: string="",
     =}
 
     state r_state: {= StateStruct * =};
-    reaction(startup, width_in, height_in) {=
+    reaction(startup, width_in, height_in, frame_in) {=
 //        #include <mdsplus.hpp>
 //        using namespace mdsplus;
         self->r_state = new StateStruct();
@@ -86,6 +93,8 @@ reactor MdsPutFrame(host: string="",
         self->r_state->width = width_in -> value;
         self->r_state->height = height_in->value;
         self->r_state->writer_thread = std::thread(do_writer, self->r_state);
+        lf_set_destructor(frame_in, unsigned_char_array_destructor);
+        lf_set_copy_constructor(frame_in, unsigned_char_array_copy_constructor);
     =}
 
     reaction(width_in, height_in) {=

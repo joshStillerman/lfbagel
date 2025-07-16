@@ -1,7 +1,7 @@
 target CCPP {
     keepalive: true,
     clock-sync: on,
-    cmake-include: ["../inc/cmake-debug-extras.txt"],
+    cmake-include: ["../inc/cmake-unsigned_char_array_t-extras.txt", "../inc/cmake-debug-extras.txt"],
     files:["unsigned_char_array_t.h"]
 }
 

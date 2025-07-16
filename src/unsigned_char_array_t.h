@@ -1,28 +1,23 @@
 #ifndef UNSIGNED_CHAR_ARRAY_T_H
 #define UNSIGNED_CHAR_ARRAY_T_H
-#include "unsigned_char_array_t.h.i"
-#include <stdio.h>
 
-  unsigned_char_array_t* unsigned_char_array_constructor(size_t length) {
-    unsigned_char_array_t* result = (unsigned_char_array_t*) malloc(sizeof(unsigned_char_array_t));
-    result->data = (unsigned char *) calloc(length, sizeof(unsigned char));
-    result->length = length;
-    return result;
-  }
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-  void unsigned_char_array_destructor(void* array) {
-    free(((unsigned_char_array_t*) array)->data);
-    free(array);
-  }
+typedef struct unsigned_char_array_t {
+    unsigned char * data;
+    size_t length;
+} unsigned_char_array_t;
 
-  void* unsigned_char_array_copy_constructor(void* array) {
-    unsigned_char_array_t* source = (unsigned_char_array_t*) array;
-    unsigned_char_array_t* copy = (unsigned_char_array_t*) malloc(sizeof(unsigned_char_array_t));
-    copy->data = (unsigned char *) calloc(source->length, sizeof(unsigned char));
-    copy->length = source->length;
-    for (size_t i = 0; i < source->length; i++) {
-      copy->data[i] = source->data[i];
-    }
-    return (void*) copy;
-  }
+unsigned_char_array_t* unsigned_char_array_constructor(size_t length);
+
+void unsigned_char_array_destructor(void* array);
+
+void* unsigned_char_array_copy_constructor(void* array);
+
+#ifdef __cplusplus
+} // extern "C" 
+#endif
+
 #endif

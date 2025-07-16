@@ -1,1 +1,1 @@
-target_link_libraries( ${LF_MAIN_TARGET} PRIVATE /opt/bagelpi/build/src/libADS1X15.so )
+target_sources( ${LF_MAIN_TARGET} PRIVATE Adafruit_ADS1X15.cpp tiny_gpio.c i2c.c)

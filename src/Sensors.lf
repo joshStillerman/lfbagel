@@ -1,6 +1,7 @@
 target CCPP {
+    cmake-include: ["../inc/cmake-current-extras.txt","../inc/cmake-heights-extras.txt" ],
     keepalive: true,
-    files: ["linear_interpolate.cpp"],
+//    files: ["Adafruit_ADS1X15.h"],
     clock-sync: on
 }
 

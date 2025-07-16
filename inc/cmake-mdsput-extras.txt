@@ -11,6 +11,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(mdsplusplus)
 
 target_include_directories(${LF_MAIN_TARGET} PRIVATE ${mdsplusplus_SOURCE_DIR}/include /usr/local/mdsplus/include)
+target_sources(${LF_MAIN_TARGET} PRIVATE unsigned_char_array_t.c)
 target_link_libraries(${LF_MAIN_TARGET} PRIVATE /usr/local/mdsplus/lib/libMdsShr.so /usr/local/mdsplus/lib/libTdiShr.so /usr/local/mdsplus/lib/libTreeShr.so)
 set_target_properties(
     ${LF_MAIN_TARGET}
@@ -18,7 +19,3 @@ set_target_properties(
         CXX_STANDARD 17
         CXX_STANDARD_REQUIRED ON
 )
-add_executable(break break.cpp)
-
-target_include_directories(break PRIVATE ${mdsplusplus_SOURCE_DIR}/include /usr/local/mdsplus/include)
-target_link_libraries(break PRIVATE /usr/local/mdsplus/lib/libMdsShr.so /usr/local/mdsplus/lib/libTdiShr.so /usr/local/mdsplus/lib/libTreeShr.so)

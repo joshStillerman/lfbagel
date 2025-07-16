@@ -1,0 +1,18 @@
+target CCPP {
+    keepalive: true,
+    clock-sync: on
+}
+
+import Heights from "Heights.lf"
+
+main reactor HeightsTest {
+preamble {=
+    #include <stdio.h>
+=}
+    timer t(0, 100 msec);
+    heights = new Heights();
+
+    reaction(t,heights.heights) {=
+        printf("At %lld Heights are %hhd %hhd %hhd %hhd\n", lf_time_logical(), heights.heights[0]->value, heights.heights[1]->value, heights.heights[2]->value, heights.heights[3]->value);
+    =}
+}

@@ -1,7 +1,7 @@
 target CCPP {
     cmake-include: ["../inc/cmake-basler-extras.txt"],
     keepalive: true,
-    files: ["unsigned_char_array_t.h.i"],
+    files: ["unsigned_char_array_t.c", "unsigned_char_array_t.h" ],
     clock-sync: on
 }
     preamble {=
@@ -11,8 +11,9 @@ target CCPP {
         #include <pylon/PylonIncludes.h>
         #include <pylon/BaslerUniversalInstantCamera.h>
         #include <pylon/BaslerUniversalImageEventHandler.h>
-        #include "unsigned_char_array_t.h.i"
         #include <chrono>
+        #include "unsigned_char_array_t.h"
+
         using namespace Pylon;
         using namespace mdsplus;
         using namespace Basler_UniversalCameraParams;
@@ -92,6 +93,11 @@ target CCPP {
 
 reactor Basler(tree_name: string="", shot: int=0, path: string="") {
 
+    preamble {=
+        CBaslerUniversalInstantCamera camera;
+        #include "unsigned_char_array_t.h"
+    =}
+
     output width_out: int;
     output height_out: int;
     output frame_out:unsigned_char_array_t*;
@@ -100,7 +106,6 @@ reactor Basler(tree_name: string="", shot: int=0, path: string="") {
     state frame_width: int;
     state frame_height: int;
     physical action grab : {= void * =};
-    preamble {=         CBaslerUniversalInstantCamera camera; =}
     reaction(startup) -> grab, width_out, height_out, frame_out {=
 //                lf_schedule(grab2, MSEC(1000));
         lf_set_destructor(frame_out, unsigned_char_array_destructor);

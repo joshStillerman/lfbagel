@@ -1,10 +1,27 @@
 cmake_minimum_required(VERSION 3.12)
-project(MyPylonApp LANGUAGES CXX)
+include(FetchContent)
+
+option(BUILD_TESTING "" OFF)
+
+FetchContent_Declare(
+    mdsplusplus
+    GIT_REPOSITORY https://github.com/WhoBrokeTheBuild/mdsplusplus.git
+    GIT_TAG main
+)
+
+FetchContent_MakeAvailable(mdsplusplus)
+
+set_target_properties(
+    ${LF_MAIN_TARGET}
+    PROPERTIES
+        CXX_STANDARD 17
+        CXX_STANDARD_REQUIRED ON
+)
 
 # 1. Set C++ standard (equivalent to CFLAGS += -std=c++11)
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+#set(CMAKE_CXX_STANDARD 11)
+#set(CMAKE_CXX_STANDARD_REQUIRED ON)
+#set(CMAKE_CXX_EXTENSIONS OFF)
 
 # 2. Allow overriding PYLON_ROOT (like PYLON_ROOT ?= /opt/pylon)
 if(NOT DEFINED ENV{PYLON_ROOT})
@@ -55,5 +72,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(wrtdListen)
 
+target_sources( ${LF_MAIN_TARGET} PRIVATE unsigned_char_array_t.c )
 target_link_libraries( ${LF_MAIN_TARGET} PRIVATE ${PYLON_LDFLAGS_LIST} wrtdListen)
+target_link_libraries(${LF_MAIN_TARGET} PRIVATE mdsplusplus)
 

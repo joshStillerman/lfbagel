@@ -1,5 +1,5 @@
 target CCPP {
-    cmake-include: ["inc/cmake-mdsvalue-extras.txt"],
+    cmake-include: ["../inc/cmake-mdsvalue-extras.txt"],
     keepalive: true,
     files: ["linear_interpolate.cpp"],
     clock-sync: on

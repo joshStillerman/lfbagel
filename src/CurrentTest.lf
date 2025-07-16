@@ -1,0 +1,28 @@
+target CCPP {
+    keepalive: true,
+    clock-sync: on
+}
+
+import Current from "Current.lf"
+
+reactor Logger {
+    preamble {=
+        #include <stdio.h>
+    =}
+    input in_value: float;
+
+    reaction(in_value) {=
+        printf("At %lld the value is %f\n", lf_time_logical(), in_value->value);
+    =}
+}
+
+main reactor CurrentTest {
+    timer t(0, 100 msec);
+    current = new Current();
+    current_logger = new Logger();
+
+    reaction(t,current.current) -> current_logger.in_value {=
+        lf_set(current_logger.in_value, current.current->value);
+    =}
+
+}

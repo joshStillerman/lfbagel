@@ -1,0 +1,32 @@
+target CCPP {
+  keepalive: true,
+  clock-sync: on
+}
+
+
+reactor ShutDownReactor {
+
+  preamble {=
+    // Schedule an event roughly every 200 msec.
+    #include <stdio.h>
+    void* external(void* a) {
+      printf("Press RETURN to continue...");
+      getchar();  // Waits for user to press Enter
+      lf_schedule(a, 0);
+      return (void *)0;
+    }
+  =}
+
+  state thread_id: lf_thread_t = 0
+
+  physical action shutItDown(100 msec)
+
+  reaction(startup) -> shutItDown {=
+    // Start a thread to schedule physical actions.
+    lf_thread_create(&self->thread_id, &external, shutItDown);
+  =}
+
+  reaction(shutItDown) {=
+      lf_request_stop();
+  =}
+}

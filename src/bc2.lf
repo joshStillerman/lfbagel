@@ -1,6 +1,6 @@
 target CCPP {
     keepalive: true,
-    files: ["linear_interpolate.cpp"],
+//    files: ["linear_interpolate.cpp"],
     clock-sync: on
 }
 
@@ -17,7 +17,7 @@ reactor bc2 {
 
   set_point_in = new MdsValue(host="", tree="lfbagel", shot=0, expression="\\BAGEL::TOP.KNOBS:SET_POINT", first_time=-3.0, delta_time = 10 msec);
   phase_in = new MdsValue(host="", tree="lfbagel", shot=0, expression="\\BAGEL::TOP.KNOBS:PHASE", first_time=-3.0, delta_time = 10 msec);
-  controller_out = new bc()
+  controller_out = new bc();
   op_start_time -> phase_in.op_start_time;
   op_start_time -> set_point_in.op_start_time
   phase_in.value_at_t -> controller_out.phase_in
