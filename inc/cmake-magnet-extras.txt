@@ -1,1 +1,1 @@
-target_sources(${LF_MAIN_TARGET} PRIVATE pca9685.c ibt2.cpp tiny_gpio.c)
+target_sources(${LF_MAIN_TARGET} PRIVATE pca9685.c ibt2.cpp i2c.c tiny_gpio.c)

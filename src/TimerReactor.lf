@@ -1,0 +1,18 @@
+target C {
+  keepalive: true //,
+//  clock-sync: on
+}
+
+
+reactor TimerReactor {
+  state count: int = 0;
+  output counter:int;
+  timer t(0, 1 sec);
+
+  reaction(t) ->counter {=
+    self->count++;
+    lf_set(counter, self->count);
+  =} 
+
+}
+

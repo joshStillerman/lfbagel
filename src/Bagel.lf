@@ -7,37 +7,37 @@ import Magnet from "Magnet.lf";
 import Sensors from "Sensors.lf";
 import bc2          from "bc2.lf";
 import WRTDTrigger from "WRTDTrigger.lf";
-import Basler from "Basler.lf";
-import MdsPutFrame from "MdsPutFrame.lf"
-import ShutDownReactor from "ShutDownReactor.lf"
+//import Basler from "Basler.lf";
+//import MdsPutFrame from "MdsPutFrame.lf"
+//import ShutDownReactor from "ShutDownReactor.lf"
 
 federated reactor Bagel {
 
 
-  shutdown_r = new ShutDownReactor() at jas@sdn1;
-  sensors_r = new Sensors() at jas@bagelpi.psfc.mit.edu;
-  magnet_r = new Magnet() at jas@bagelpi.psfc.mit.edu;
-  trigger = new WRTDTrigger(event_name="BAGEL_LF_START") at jas@sdn1;
-  controller = new bc2() at jas@sdn1;
+//  shutdown_r = new ShutDownReactor();
+  sensors_r = new Sensors() at jas@bagelpi;
+  magnet_r = new Magnet() at jas@bagelpi;
+  trigger = new WRTDTrigger(event_name="BAGEL_LF_START");
+  controller = new bc2();
 
-  camera1 = new Basler(tree_name="lfbagel", shot=0, path="\\top.basler1") at jas@pcs-a100;
-  camera2 = new Basler(tree_name="lfbagel", shot=0, path="\\top.basler2") at jas@pcs-a100;
-  writer1 = new MdsPutFrame(host="", treename="lfbagel", shot=0, path="\\TOP:basler1:frames", first_time=-3.0) at jas@sdn1;
-  writer2 = new MdsPutFrame(host="", treename="lfbagel", shot=0, path="\\TOP:basler2:frames", first_time=-3.0) at jas@sdn1;
+//  camera1 = new Basler(tree_name="lfbagel", shot=0, path="\\top.basler1") at jas@pcs-a100;
+//  camera2 = new Basler(tree_name="lfbagel", shot=0, path="\\top.basler2") at jas@pcs-a100;
+//  writer1 = new MdsPutFrame(host="", treename="lfbagel", shot=0, path="\\TOP:basler1:frames", first_time=-3.0);
+//  writer2 = new MdsPutFrame(host="", treename="lfbagel", shot=0, path="\\TOP:basler2:frames", first_time=-3.0);
 
   sensors_r.current -> controller.current_in;
   sensors_r.heights -> controller.heights_in;
   trigger.operation_time -> controller.op_start_time
   controller.demand -> magnet_r.demand 
 
-  camera1.width_out -> writer1.width_in;
-  camera1.height_out -> writer1.height_in;
-  trigger.operation_time -> writer1.op_start_time;
-  camera1.frame_out -> writer1.frame_in
+//  camera1.width_out -> writer1.width_in;
+//  camera1.height_out -> writer1.height_in;
+//  trigger.operation_time -> writer1.op_start_time;
+//  camera1.frame_out -> writer1.frame_in
 
-  camera2.width_out -> writer2.width_in;
-  camera2.height_out -> writer2.height_in;
-  trigger.operation_time -> writer2.op_start_time;
-  camera2.frame_out -> writer2.frame_in
+//  camera2.width_out -> writer2.width_in;
+//  camera2.height_out -> writer2.height_in;
+//  trigger.operation_time -> writer2.op_start_time;
+//  camera2.frame_out -> writer2.frame_in
 }
 

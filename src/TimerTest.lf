@@ -1,0 +1,24 @@
+target C { 
+  keepalive: true //,
+//  clock-sync: on
+}
+
+import TimerReactor from "TimerReactor.lf";
+
+reactor Logger {
+    input counter: int;
+    reaction(counter) {=
+        printf("At %ld the counter is %d\n", lf_time_logical(), counter->value);
+        fflush(stdout);
+    =}
+}
+
+federated reactor TimerTest {
+
+    preamble {=
+        #include <stdio.h>
+    =}
+    timer_r = new TimerReactor() at 172.25.201.43;
+    logger_r = new Logger() at 172.25.201.54;
+    timer_r.counter -> logger_r.counter
+}
