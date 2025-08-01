@@ -1,6 +1,6 @@
-target C { 
-  keepalive: true //,
-//  clock-sync: on
+target CCPP { 
+  keepalive: true,
+  clock-sync: on
 }
 
 import TimerReactor from "TimerReactor.lf";
