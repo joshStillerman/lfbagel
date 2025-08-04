@@ -8,12 +8,10 @@ target CCPP {
 import Basler from "Basler.lf"
 import WRTDTrigger from "WRTDTrigger.lf"
 import MdsPutFrame from "MdsPutFrame.lf"
-
-main reactor BaslerTest{
-  state thread_id: lf_thread_t = 0
-  physical action shutItDown(100 msec)
-
   preamble {=
+    #ifndef __SHUTDOWNER_
+    #define __SHUTDOWNER_
+extern C {
     // Schedule an event roughly every 200 msec.
     void* external(void* a) {
       printf("Press RETURN to continue...");
@@ -22,26 +20,30 @@ main reactor BaslerTest{
       return (void *)0;
     }
     #include "unsigned_char_array_t.h"
+    #endif
+    }
   =}
 
-
+federated reactor BaslerTest{
+  state thread_id: lf_thread_t = 0
+  physical action shutItDown(100 msec)
 
   trig = new WRTDTrigger(event_name="fred");
-  camera1 = new Basler(tree_name="basler", shot=0, path="\\top.basler1"); // at jas@localhost;
-  camera2 = new Basler(tree_name="basler", shot=0, path="\\top.basler2") at jas@localhost;
+  camera1 = new Basler(tree_name="basler", shot=0, path="\\top.basler1") at jas@pcs-a100;
+//  camera2 = new Basler(tree_name="basler", shot=0, path="\\top.basler2") at jas@localhost;
 
   writer1 = new MdsPutFrame(host="", treename="basler", shot=0, path="\\TOP:basler1:frames", first_time=-3.0);// at jas@localhost;
-  writer2 = new MdsPutFrame(host="", treename="basler", shot=0, path="\\TOP:basler2:frames", first_time=-3.0) at jas@localhost;
+//  writer2 = new MdsPutFrame(host="", treename="basler", shot=0, path="\\TOP:basler2:frames", first_time=-3.0) at jas@localhost;
 
   camera1.width_out -> writer1.width_in;
   camera1.height_out -> writer1.height_in;
   trig.operation_time -> writer1.op_start_time;
   camera1.frame_out -> writer1.frame_in
 
-  camera2.width_out -> writer2.width_in;
-  camera2.height_out -> writer2.height_in;
-  trig.operation_time -> writer2.op_start_time;
-  camera2.frame_out -> writer2.frame_in
+//  camera2.width_out -> writer2.width_in;
+//  camera2.height_out -> writer2.height_in;
+//  trig.operation_time -> writer2.op_start_time;
+//  camera2.frame_out -> writer2.frame_in
 
   reaction(startup) -> shutItDown {=
     // Start a thread to schedule physical actions.

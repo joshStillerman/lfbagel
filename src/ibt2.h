@@ -8,7 +8,8 @@
  * @copyright Copyright (c) 2021
  * 
  */
-
+#ifndef __IBT2_H
+#define __IBT2_H
 #include "i2c.h"
 #include "pca9685.h"
 
@@ -56,6 +57,4 @@ class IBT2 {
         bool _enabled;
         int16_t _setting;
 };
-extern "C" {
-#include "ibt2_c.h"
-}
+#endif

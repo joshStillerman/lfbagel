@@ -226,32 +226,3 @@ void IBT2::setDutyCycle(float value)
     }
     _setting = ival;
 }
-extern "C" {
-	void  *IBT2_new(PCA9685 pwm, IBT2_Mode mode, uint8_t ch_R_EN,  
-			uint8_t ch_L_EN,uint8_t ch_R_PWM, uint8_t ch_L_PWM)
-	{
-			return (void *)new IBT2(pwm, (IBT2::Mode)mode, ch_R_EN,  
-					        ch_L_EN, ch_R_PWM, ch_L_PWM);
-	}
-	void  IBT2_delete(void * ctx)
-	{
-			delete (IBT2 *) ctx;
-	}
-        void  IBT2_powerDown(void * ctx)
-	{
-		((IBT2 *) ctx)->powerDown();
-
-	}
-	void  IBT2_enable(void * ctx)
-        {
-	                ((IBT2 *) ctx)->enable();	        
-	}       
-	void  IBT2_disable(void * ctx)
-        {
-	                ((IBT2 *) ctx)->disable();
-        }       
-	void  IBT2_setDutyCycle(void *ctx, float magnet_demand)
-        {
-		        ((IBT2 *) ctx)->setDutyCycle(magnet_demand); 
-	}
-}	

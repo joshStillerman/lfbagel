@@ -35,7 +35,7 @@ reactor MdsValue(host: string="", tree: string="", shot:int=-1, expression: stri
             self->eventTime = op_start_time->value; 
             lf_set_mode(Active);
         =}
-        reaction(t) -> value_at_t,time_for_value {=
+        reaction idle_timer(t) -> value_at_t,time_for_value {=
             printf("idle - %ld setting value_at_t ( %f ) to %f\n", lf_time_logical(), self->first_time, self->yValues.front());
             lf_set(value_at_t, self->yValues.front());
             lf_set(time_for_value, (double)self->first_time);
@@ -43,7 +43,7 @@ reactor MdsValue(host: string="", tree: string="", shot:int=-1, expression: stri
     }
 
     mode Active {
-        reaction(t) -> value_at_t, time_for_value {=
+        reaction active_timer(t) -> value_at_t, time_for_value {=
             float ans;
             double experiment_time = (lf_time_logical() - self->eventTime) * 1E-9;
             if (self->isScalar)

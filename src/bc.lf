@@ -20,12 +20,11 @@ target CCPP {
 }
 
 reactor bc {
-    input op_start_time:instant_t
     input[4] heights_in: uint8_t
     input    current_in: float
     input    set_point_in: float
     input    phase_in: float
-    input[6] cam_z_in: float
+//    input[6] cam_z_in: float
     output   demand_out: float
     timer    t(0, 10 ms)
 
@@ -54,6 +53,8 @@ reactor bc {
     =}
 
     reaction(startup) {=
+        printf("CONTROLLER IS STARTING UP at logical time %llu\n", lf_time_logical());
+        fflush(stdout);
         RT_MODEL_bagelController1_3_T *const bagelController1_3_M = &bagelController1_3_M_;
         bagelController1_3_M->dwork         = &model_DW;
         bagelController1_3_M->prevZCSigState = &model_PrevZCX;
@@ -82,7 +83,10 @@ reactor bc {
         }
     =}
 
-    reaction(heights_in, current_in, phase_in, set_point_in, cam_z_in) -> demand_out {=
+//    reaction(heights_in, current_in, phase_in, set_point_in, cam_z_in) -> demand_out {=
+    reaction(heights_in, current_in, phase_in, set_point_in) -> demand_out {=
+        printf("CONTROLLER Step at %llu\n", lf_time_logical());
+        fflush(stdout);
         RT_MODEL_bagelController1_3_T *const bagelController1_3_M = &bagelController1_3_M_;
         int i;
         for (i=0; i<4; i++) {
@@ -92,7 +96,8 @@ reactor bc {
         U_PHASE = (int)phase_in->value;
         U_SET_POINT = set_point_in->value;
         for (i=0; i<6; i++) {
-            U_CAM_Z[i] = cam_z_in[i]->value;
+//            U_CAM_Z[i] = cam_z_in[i]->value;
+            U_CAM_Z[i] = 0.0;
         }
         bagelController1_3_step(
             bagelController1_3_M,

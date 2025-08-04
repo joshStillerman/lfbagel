@@ -35,7 +35,8 @@ reactor Heights {
     output[4] heights : uint8_t
     timer t(0, 10 ms)
 
-  reaction(t) -> heights {=
+    @label("Read Heights")
+    reaction read_heights(t) -> heights {=
     uint8_t raw[4];
 
     VL6180XSet_Read(tofs, raw);

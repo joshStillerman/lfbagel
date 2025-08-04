@@ -23,9 +23,6 @@ target CCPP {
         class MyImageHandler : public CBaslerUniversalImageEventHandler {
         private:
             void* _grab = NULL;
-//            CBaslerUniversalInstantCamera* camera;
-//            int frame_width;
-//            int frame_height;
 
         public:
             // Default constructor
@@ -69,24 +66,6 @@ target CCPP {
                     std::cerr << "OnImageGrabbed: Error code " << grabResult->GetErrorCode() << "\n";
                 }
             }
-//            void setWidth(unsigned int w) {
-//                frame_width = w;
-//            }
-//            unsigned int getWidth() const {
-//                return frame_width;
-//            }
-//            void setHeight(unsigned int h) {
-//                frame_height = h;
-//            }
-//            unsigned int getHeight() const {
-//                return frame_height;
-//            }
-//            void setCamera(Pylon::CBaslerUniversalInstantCamera& camera_in) {
-//               camera = &camera_in;  // store as pointer
-//            }
-//            CBaslerUniversalInstantCamera getCamera() const {
-//                return camera;
-//            }
         };
 #endif
     =}
@@ -176,7 +155,7 @@ reactor Basler(tree_name: string="", shot: int=0, path: string="") {
         delete self->handler1;
         PylonTerminate();
     =}
-    reaction(grab) -> frame_out {=
+    reaction (grab) -> frame_out {=
 
         printf("XXXXXX got a frame\n");
         unsigned_char_array_t* array =  unsigned_char_array_constructor(self->frame_width*self->frame_height);

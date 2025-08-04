@@ -2,7 +2,7 @@ target CCPP {
     cmake-include: ["../inc/cmake-current-extras.txt"],
     keepalive: true,
     files: ["Adafruit_ADS1X15.h","Adafruit_ADS1X15.cpp", "ADS1X15.h", "tiny_gpio.c", "tiny_gpio.h", "i2c.c", "i2c.h"],
-    clock-sync: true
+    clock-sync: on
 }
 
 preamble {=
@@ -34,7 +34,7 @@ reactor Current {
     timer t(0, 10 ms)
     state adc : {= Adafruit_ADS1115 * =}
 
-  reaction(startup) {=
+  reaction (startup) {=
             bus = i2c_open("/dev/i2c-1");
 
             self->adc = new Adafruit_ADS1115();
@@ -42,8 +42,8 @@ reactor Current {
             self->adc->setGain(GAIN_ONE); // to 4.096V max
             start_read_current(self->adc);
   =}
-
-  reaction(t) -> current {=
+@label("Read Current")
+  reaction read_current(t) -> current {=
     lf_set(current, get_current(self->adc));
     start_read_current(self->adc);
   =}

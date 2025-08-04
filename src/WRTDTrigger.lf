@@ -31,12 +31,14 @@ reactor WRTDTrigger(event_name: string="") {
       void* dispatch_listen(void* eventRecieved) {
           double delay = 0;
           printf("the event name is %s\n", event_name);
+          fflush(stdout);
           double event_time = wrtdGetTime("224.0.23.159", 5044, event_name, 60, delay, 37, 1);
           instant_t ev_ns = (instant_t)(event_time * 1E9);
           instant_t *ev_ns_ptr = (instant_t *)calloc(1, sizeof(instant_t));
           *ev_ns_ptr = (instant_t)(event_time * 1E9);
 //          lf_set(operation_time, ev_ns);
           printf("The event %s corresponds to %ld\n", event_name, *ev_ns_ptr);
+          fflush(stdout);
           lf_schedule_value(eventRecieved, 0, ev_ns_ptr, sizeof(instant_t));
           return (void *)0;
       }
@@ -51,7 +53,10 @@ reactor WRTDTrigger(event_name: string="") {
 
     reaction(eventRecieved) -> operation_time {=
         printf("GOT THE EVENT\n");
-        lf_set(operation_time, (instant_t)eventRecieved->value);
+        fflush(stdout);
+        lf_set(operation_time, *(instant_t *)eventRecieved->value);
+        printf("SET THE OPERATION_TIME\n");
+        fflush(stdout);
     =}
 //    reaction(eventListen) -> operation_time  {=
 //        double delay = 0;
@@ -65,5 +70,6 @@ reactor WRTDTrigger(event_name: string="") {
     reaction(shutdown) {=
 //        free(event_name);
         printf("WRTDTrigger is all done\n");
+        fflush(stdout);
     =}
 }

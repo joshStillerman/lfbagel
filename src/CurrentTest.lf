@@ -21,6 +21,7 @@ main reactor CurrentTest {
     current = new Current();
     current_logger = new Logger();
 
+    @label ("Read Current")
     reaction(t,current.current) -> current_logger.in_value {=
         lf_set(current_logger.in_value, current.current->value);
     =}

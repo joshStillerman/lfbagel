@@ -97,12 +97,12 @@ reactor MdsPutFrame(host: string="",
         lf_set_copy_constructor(frame_in, unsigned_char_array_copy_constructor);
     =}
 
-    reaction(width_in, height_in) {=
+    reaction set_size(width_in, height_in) {=
        self->r_state->width = (unsigned)width_in->value;
        self->r_state->height = (unsigned)height_in->value;
     =}
 
-    reaction(frame_in, op_start_time) {=
+    reaction frame_ready(frame_in, op_start_time) {=
       printf("frame_in %ld, %ld %f self->first_time %f\n", op_start_time->value, lf_time_logical(), (lf_time_logical()-op_start_time->value)*1E-9, self->first_time);
       if (frame_in->is_present && (op_start_time->value != 0)) {
         printf("\tchecking if %f is > %f\n", (lf_time_logical()-op_start_time->value)*1E-9, self->first_time);

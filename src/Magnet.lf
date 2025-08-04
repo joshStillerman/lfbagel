@@ -5,87 +5,93 @@ target CCPP {
     clock-sync: on
 }
 
+    preamble {=
+        #include <stdio.h>
+        #define TIMEOUT_NS 2000000000 // 30 ms
+        #ifndef _GNU_SOURCE
+        #define _GNU_SOURCE
+        #endif
+        #include <unistd.h>
+        #include <stdint.h>
+        #include "ibt2.h"
+        #include "i2c.h"
+        #include "tiny_gpio.h"
+    =}
 reactor Magnet {
-        preamble {=
-            #include <stdio.h>
-            #define TIMEOUT_NS 30000000 // 30 ms
-            instant_t last_time = 0;
 
-//            #define _GNU_SOURCE
-//            #include <unistd.h>
-//            #include <stdint.h>
-//            #include "ibt2_c.h"
-//            #include "i2c.h"
-//            #include "tiny_gpio.h"
-//            #define POLARITY -1
-//            #define CURRENT_CHANNEL 1
-//            #define TIMEOUT_NS 30000000 // 30 ms
-//
-//           void * magnet;
-//            i2c bus;
-//            bool powered_up = false;
-//            float magnet_demand = 0.0;
-//            instant_t last_time = 0;
-//            PCA9685 pwm;
-//            void shutdown_magnet() {
-//                 printf("shutting down magnet\n");
-//                 IBT2_setDutyCycle(magnet, 0.0);
-//                 IBT2_disable(magnet);
-//            }
 
+
+    preamble {=
+        void shutdown_magnet( IBT2 * magnet) {
+            printf("shutting down magnet\n");
+            fflush(stdout);
+            magnet->setDutyCycle(0.0);
+            magnet->disable();
+        }
   =}
 
+    state last_time: instant_t
+    state pwm: {= PCA9685 =} 
+    state magnet: {= IBT2 *=}
+    state bus: {= i2c =}
     input demand : float
     timer t(0, 5 ms)
 
-  reaction(startup) {=
 
-//            bus = i2c_open("/dev/i2c-1");
-//            pwm = PCA9685_init(bus, 0x40);
-//            PCA9685_setFreq(pwm, 1500);
-//            magnet = IBT2_new(pwm, SIGN_MAGN_LO, 1, 0, 3, 2);
-//            gpioInitialise();
-//            gpioSetMode(12, PI_OUTPUT);
-//            IBT2_enable(magnet);
+ @label("Initialize I/O")
+    reaction(startup) {=
+            self->bus = i2c_open("/dev/i2c-1");
+            self->pwm = PCA9685_init(self->bus, 0x40);
+            PCA9685_setFreq(self->pwm, 1500);
+            self->magnet = new IBT2(self->pwm, IBT2::SIGN_MAGN_LO, 1, 0, 3, 2);
+            gpioInitialise();
+            gpioSetMode(12, PI_OUTPUT);
+            self->magnet->enable();
+            self->last_time = -1;
 
   =}
 
+   @label("Shutdown Magnet")
   reaction(shutdown) {=
       printf("SHUTTING DOWN\n");
-
-//      shutdown_magnet();
+      fflush(stdout);
+      shutdown_magnet(self->magnet);
 
   =}
-
-  reaction(t) {=
-        printf("Magnet check watchdog at %lu\n", lf_time_physical());
-        if (last_time > 0) {
-             if ((lf_time_physical() - last_time) > TIMEOUT_NS) {
+  @label("Check Timeout")
+  reaction check_timeout(t) {=
+        printf("Magnet check watchdog at %llu\n", lf_time_logical());
+        fflush(stdout);
+        if (self->last_time > 0) {
+             if ((lf_time_physical() - self->last_time) > TIMEOUT_NS) {
                 printf("WATCHDOG STOP\n");
+                fflush(stdout);
                 lf_request_stop();
             }
         }
   =}
 
-  reaction(demand) {=
-        printf("Magnet got demand %f at logical time %lu, physical time %lu\n", 
+  @label("Set Current")
+  reaction set_current(demand) {=
+        printf("Magnet got demand %f at logical time %llu, physical time %llu\n", 
                 demand->value, lf_time_logical(), lf_time_physical());
+        fflush(stdout);
         instant_t current_time = lf_time_physical();
-        if (last_time > 0) {
-            if ((lf_time_physical() - last_time) > TIMEOUT_NS) {
+        if (self->last_time > 0) {
+            if ((lf_time_physical() - self->last_time) > TIMEOUT_NS) {
                 printf("DEMAND STOP\n");
+                fflush(stdout);
                 lf_request_stop();
             }
         }
-        last_time = lf_time_physical();
+        self->last_time = lf_time_physical();
 
-//        gpioWrite(12, 1);           // end the timing pulse.. (up)
-//        IBT2_setDutyCycle(magnet, demand->value);
-//
-//        const struct timespec t200_us = { 0, 200000};
-//        nanosleep(&t200_us, NULL);
-//
-//        gpioWrite(12, 0);           // start the timing pulse.. (down)
+        gpioWrite(12, 1);           // end the timing pulse.. (up)
+        self->magnet->setDutyCycle(demand->value);
+        const struct timespec t200_us = { 0, 200000};
+        nanosleep(&t200_us, NULL);
+
+        gpioWrite(12, 0);           // start the timing pulse.. (down)
 
   =}
 }
