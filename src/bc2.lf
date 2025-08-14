@@ -9,6 +9,9 @@ import bc from "bc.lf"
 
 reactor bc2 {
 
+  preamble {=
+    #include <stdio.h>
+  =}
   input op_start_time:instant_t
   input[4] heights_in: uint8_t
   input    current_in: float
@@ -20,11 +23,18 @@ reactor bc2 {
   @label("Read Phase")
   phase_in = new MdsValue(host="", tree="lfbagel", shot=0, expression="\\TOP.KNOBS:PHASE", first_time=-3.0, delta_time = 10 msec);
   controller_out = new bc();
-  op_start_time -> phase_in.op_start_time;
-  op_start_time -> set_point_in.op_start_time
+  //op_start_time -> phase_in.op_start_time;
+  //op_start_time -> set_point_in.op_start_time
   phase_in.value_at_t -> controller_out.phase_in
   set_point_in.value_at_t -> controller_out.set_point_in
   current_in -> controller_out.current_in
   heights_in -> controller_out.heights_in
   controller_out.demand_out -> demand
+
+  reaction(op_start_time)->phase_in.op_start_time, set_point_in.op_start_time {=
+    printf("BC2 got op_start_time %ld\n", op_start_time->value);
+    fflush(stdout);
+    lf_set(phase_in.op_start_time, op_start_time->value);
+    lf_set(set_point_in.op_start_time, op_start_time->value);
+  =}
 }

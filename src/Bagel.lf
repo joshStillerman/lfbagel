@@ -7,18 +7,21 @@ import Magnet from "Magnet.lf";
 import Sensors from "Sensors.lf";
 import bc2          from "bc2.lf";
 import WRTDTrigger from "WRTDTrigger.lf";
-import Basler from "Basler.lf";
-import MdsPutFrame from "MdsPutFrame.lf"
-import ShutDownReactor from "ShutDownReactor.lf"
+//import Basler from "Basler.lf";
+//import MdsPutFrame from "MdsPutFrame.lf"
+import MDSPutSignals from "MDSPutSignals.lf";
+import ShutDownReactor from "ShutDownReactor.lf";
 
 federated reactor Bagel at sdn1 {
-
-
+    preamble {=
+      #include <stdio.h>
+    =}
   shutdown_r = new ShutDownReactor() at sdn1;
   sensors_r = new Sensors() at jas@bagelpi;
   magnet_r = new Magnet() at jas@bagelpi;
   trigger = new WRTDTrigger(event_name="BAGEL_LF_START") at sdn1;
   controller = new bc2() at sdn1;
+  sig_writer = new MDSPutSignals() at sdn1;
 
 //  camera1 = new Basler(tree_name="lfbagel", shot=0, path="\\top.basler1") at jas@pcs-a100;
 //  camera2 = new Basler(tree_name="lfbagel", shot=0, path="\\top.basler2") at jas@pcs-a100;
@@ -27,8 +30,17 @@ federated reactor Bagel at sdn1 {
 
   sensors_r.current -> controller.current_in;
   sensors_r.heights -> controller.heights_in;
-  trigger.operation_time -> controller.op_start_time
-  controller.demand -> magnet_r.demand 
+  trigger.operation_time -> controller.op_start_time;
+  trigger.operation_time -> sig_writer.op_start_time;
+  controller.demand -> magnet_r.demand;
+  sensors_r.heights -> sig_writer.heights_in; 
+  sensors_r.current -> sig_writer.current_in;
+  controller.demand -> sig_writer.demand_in;
+  
+  reaction(trigger.operation_time) {=
+    printf("In BAGEL, got operation_time %ld\n", trigger.operation_time->value);
+    fflush(stdout);
+  =}
 
 //  camera1.width_out -> writer1.width_in;
 //  camera1.height_out -> writer1.height_in;

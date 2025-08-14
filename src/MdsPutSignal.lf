@@ -9,6 +9,7 @@ target CCPP {
         #include <vector>
         #include <mdsplus.hpp>
         using namespace mdsplus;
+        #define SEGMENT_LENGTH 100
     =}
 
 reactor MdsPutSignal(host: string="", 
@@ -31,22 +32,36 @@ reactor MdsPutSignal(host: string="",
     reaction(startup) {=
         self->tree.open(self->treename, self->shot, Mode::Normal);
         self->node = self->tree.getNode(self->path);
-        self->yValues.reserve(1000);
-        self->xValues.reserve(1000);
+        self->yValues.reserve(SEGMENT_LENGTH);
+        self->xValues.reserve(SEGMENT_LENGTH);
     =}
     
     reaction(time_value, signal_value) {=
         if (time_value->value >= self->first_time) {
+            printf("adding (%f, %f) to %s sample %d\n", time_value->value, signal_value->value, self->path, self->samplesFilled);
+            fflush(stdout);
             self->xValues.push_back(time_value->value);
             self->yValues.push_back(signal_value->value);
             self->samplesFilled++;
+            if (self->samplesFilled == SEGMENT_LENGTH) {
+                printf("I am writing out a segment\n");
+                fflush(stdout);
+                self->node.makeSegment(self->xValues.front(), self->xValues.back(), self->xValues, self->yValues);
+                self->samplesFilled = 0;
+                self->xValues.clear();
+                self->yValues.clear();
+            }
         }
     =}
     reaction(shutdown) {=
         printf("I am in shutdown writing out the data\n");
+        fflush(stdout);
         if (self->samplesFilled > 0) {
-            auto sig = Signal((char *)self->yValues, nullptr, (char *)self->xValues);
-            self->node.putRecord(sig);
+            self->node.makeSegment(self->xValues.front(), self->xValues.back(), self->xValues, self->yValues);
+            self->samplesFilled = 0;
+            self->xValues.clear();
+            self->yValues.clear();
+
         }
     =}
 }

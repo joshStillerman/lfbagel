@@ -7,7 +7,7 @@ target CCPP {
 
     preamble {=
         #include <stdio.h>
-        #define TIMEOUT_NS 2000000000 // 30 ms
+        #define TIMEOUT_MS 10000 // 30 ms
         #ifndef _GNU_SOURCE
         #define _GNU_SOURCE
         #endif
@@ -60,13 +60,14 @@ reactor Magnet {
   =}
   @label("Check Timeout")
   reaction check_timeout(t) {=
-        printf("Magnet check watchdog at %llu\n", lf_time_logical());
+//        printf("Magnet check watchdog at %llu\n", lf_time_logical());
         fflush(stdout);
         if (self->last_time > 0) {
-             if ((lf_time_physical() - self->last_time) > TIMEOUT_NS) {
-                printf("WATCHDOG STOP\n");
+             instant_t time_logical = lf_time_logical();
+             if ((time_logical/1000000 - self->last_time/1000000) > TIMEOUT_MS) {
+                printf("WATCHDOG STOP - DIFFERENCE is %d and TIMEOUT_MS is %d\n", (int)(time_logical/1000000-self->last_time/1000000), (int)TIMEOUT_MS);
                 fflush(stdout);
-                lf_request_stop();
+//                lf_request_stop();
             }
         }
   =}
@@ -78,13 +79,13 @@ reactor Magnet {
         fflush(stdout);
         instant_t current_time = lf_time_physical();
         if (self->last_time > 0) {
-            if ((lf_time_physical() - self->last_time) > TIMEOUT_NS) {
+            if ((lf_time_physical()/1000000 - self->last_time/1000000) > TIMEOUT_MS) {
                 printf("DEMAND STOP\n");
                 fflush(stdout);
                 lf_request_stop();
             }
         }
-        self->last_time = lf_time_physical();
+        self->last_time = lf_time_logical();
 
         gpioWrite(12, 1);           // end the timing pulse.. (up)
         self->magnet->setDutyCycle(demand->value);

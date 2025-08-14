@@ -1,11 +1,3 @@
-//
-// WIP -
-//   x make the cmake-operation-time-extras.txt git fetch wrtdListen
-//   x add what is needed to get the h in the right place
-//
-//   - look at times printed and figure out the expression
-//   - set the output to the expression in the timer reaction
-//
 target CCPP {
     keepalive: true,
     cmake-include: ["../inc/cmake-operation-time-extras.txt"],
@@ -18,7 +10,7 @@ reactor WRTDTrigger(event_name: string="") {
   // That sets the operation_event_time
 
     output operation_time: instant_t;
-    logical action eventRecieved : time ;
+    physical action eventRecieved : time ;
     state thread_id: lf_thread_t = 0
 
   preamble {=
@@ -36,10 +28,8 @@ reactor WRTDTrigger(event_name: string="") {
           instant_t ev_ns = (instant_t)(event_time * 1E9);
           instant_t *ev_ns_ptr = (instant_t *)calloc(1, sizeof(instant_t));
           *ev_ns_ptr = (instant_t)(event_time * 1E9);
-//          lf_set(operation_time, ev_ns);
-          printf("The event %s corresponds to %ld\n", event_name, *ev_ns_ptr);
           fflush(stdout);
-          lf_schedule_value(eventRecieved, 0, ev_ns_ptr, sizeof(instant_t));
+          lf_schedule_value(eventRecieved, 0, ev_ns_ptr, sizeof(ev_ns));
           return (void *)0;
       }
   =}
@@ -52,20 +42,26 @@ reactor WRTDTrigger(event_name: string="") {
     =}
 
     reaction(eventRecieved) -> operation_time {=
+        // eventRecived->Value  is time_physical in NS of event
+        // delta_from_now = time_physical - ev->value
+        // logical_event_time = logical_time + delta_from_now
+        // set the operation time to that.
+        // print deta_from_now in seconds
         printf("GOT THE EVENT\n");
         fflush(stdout);
-        lf_set(operation_time, *(instant_t *)eventRecieved->value);
+        instant_t ptime = lf_time_physical();
+        instant_t ltime = lf_time_logical();
+        instant_t delta_time = (instant_t)eventRecieved->value - ptime;
+        instant_t logical_event_time = ltime + delta_time;
+
+        printf("at physical time %ld logical time %ld got event time %ld --> delta time %ld and logical event time %ld\n",
+                ptime, ltime, (instant_t)eventRecieved->value, delta_time, logical_event_time);
+        printf("\tSO the event is %f seconds in the future\n",delta_time*1E-9);
+        fflush(stdout); 
+        lf_set(operation_time, logical_event_time);
         printf("SET THE OPERATION_TIME\n");
         fflush(stdout);
     =}
-//    reaction(eventListen) -> operation_time  {=
-//        double delay = 0;
-//        printf("the event name is %s\n", self->event_name);
-//        double event_time = wrtdGetTime("224.0.23.159", 5044, self->event_name, 60, delay, 37, 1);
-//        instant_t ev_ns = (instant_t)(event_time * 1E9);
-//        lf_set(operation_time, ev_ns);
-//        printf("The event %s corresponds to %ld\n", self->event_name, eventListen->value);
-//   =}
 
     reaction(shutdown) {=
 //        free(event_name);

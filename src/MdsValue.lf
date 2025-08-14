@@ -13,6 +13,7 @@ target CCPP {
     =}
 
 reactor MdsValue(host: string="", tree: string="", shot:int=-1, expression: string="", first_time:double=0.0, delta_time:time=10 msec) {
+    // op_start_time is the logical time of the event
     input op_start_time:instant_t
     output value_at_t: float;
     output time_for_value: double;
@@ -32,11 +33,15 @@ reactor MdsValue(host: string="", tree: string="", shot:int=-1, expression: stri
     initial mode Idle {
         reaction(op_start_time) -> Active {=
             printf("got an op_start_time with value %ld\n", op_start_time->value);
+            fflush(stdout);
             self->eventTime = op_start_time->value; 
-            lf_set_mode(Active);
+            if (op_start_time->value != 0) {
+                lf_set_mode(Active);
+            }
         =}
         reaction idle_timer(t) -> value_at_t,time_for_value {=
             printf("idle - %ld setting value_at_t ( %f ) to %f\n", lf_time_logical(), self->first_time, self->yValues.front());
+            fflush(stdout);
             lf_set(value_at_t, self->yValues.front());
             lf_set(time_for_value, (double)self->first_time);
         =}
@@ -52,6 +57,8 @@ reactor MdsValue(host: string="", tree: string="", shot:int=-1, expression: stri
                 ans = linear_interpolate(self->xValues, self->yValues, experiment_time);
             lf_set(value_at_t, ans);
             lf_set(time_for_value, experiment_time);
+            printf("MDSVALUE returning %f for time %f\n", ans, experiment_time);
+            fflush(stdout);
         =}
     }
 
