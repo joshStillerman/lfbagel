@@ -1,0 +1,138 @@
+#!/bin/bash -l
+# Launcher for federated Bagel.lf Lingua Franca program.
+# Uncomment to specify to behave as close as possible to the POSIX standard.
+# set -o posix
+
+# Enable job control
+set -m
+shopt -s huponexit
+
+# Set a trap to kill all background jobs on error or control-C
+# Use two distinct traps so we can see which signal causes this.
+cleanup() {
+    if [ "$EXITED_SUCCESSFULLY" = true ] ; then
+        exit 0
+    else
+        printf "Killing federate %s.\n" ${pids[*]}
+        # The || true clause means this is not an error if kill fails.
+        kill ${pids[@]} || true
+        printf "#### Killing RTI %s.\n" ${RTI}
+        kill ${RTI} || true
+        exit 1
+    fi
+}
+
+trap 'cleanup; exit' EXIT
+
+# Create a random 48-byte text ID for this federation.
+# The likelihood of two federations having the same ID is 1/16,777,216 (1/2^24).
+FEDERATION_ID=`openssl rand -hex 24`
+echo "Federate Bagel in Federation ID '$FEDERATION_ID'"
+# Launch the federates:
+#### Host is sdn1
+echo "#### Launching the runtime infrastructure (RTI) on remote host sdn1."
+# FIXME: Killing this ssh does not kill the remote process.
+# A double -t -t option to ssh forces creation of a virtual terminal, which
+# fixes the problem, but then the ssh command does not execute. The remote
+# federate does not start!
+ssh sdn1 'mkdir -p log; \
+source /usr/local/mdsplus/setup.sh
+    echo "-------------- Federation ID: "'$FEDERATION_ID' >> log/Bagel_RTI.log; \
+    date >> log/Bagel_RTI.log; \
+    echo "Executing RTI: ~/LinguaFrancaRemote/Bagel/bin/RTI -i '${FEDERATION_ID}' \
+                        -n 6 \
+                        -c on \
+period 5000000 \
+exchanges-per-interval 10 \
+" 2>&1 | tee -a log/Bagel_RTI.log; \
+    # First, check if the RTI is on the PATH
+    if ! command -v RTI &> /dev/null
+    then
+        echo "RTI could not be found."
+        echo "The source code can be found in org.lflang/src/lib/core/federated/RTI"
+        exit 1
+    fi
+    ~/LinguaFrancaRemote/Bagel/bin/RTI -i '${FEDERATION_ID}' \
+                        -n 6 \
+                        -c on \
+period 5000000 \
+exchanges-per-interval 10 \ 2>&1 | tee -a log/Bagel_RTI.log' &
+# Store the PID of the channel to RTI
+RTI=$!
+# Wait for the RTI to boot up before
+# starting federates (this could be done by waiting for a specific output
+# from the RTI, but here we use sleep)
+sleep 5
+echo "#### Launching the federate federate__shutdown_r on host sdn1"
+# FIXME: Killing this ssh does not kill the remote process.
+# A double -t -t option to ssh forces creation of a virtual terminal, which
+# fixes the problem, but then the ssh command does not execute. The remote
+# federate does not start!
+ssh sdn1 '
+source /usr/local/mdsplus/setup.sh
+    cd LinguaFrancaRemote; \
+    echo "Executing: ~/LinguaFrancaRemote/Bagel/bin/federate__shutdown_r -i '$FEDERATION_ID'" 2>&1 | tee -a ~/LinguaFrancaRemote/Bagel/log/federate__shutdown_r.log; 
+    ~/LinguaFrancaRemote/Bagel/bin/federate__shutdown_r -i '$FEDERATION_ID' 2>&1 | tee -a ~/LinguaFrancaRemote/Bagel/log/federate__shutdown_r.log' &
+pids[0]=$!
+echo "#### Launching the federate federate__sensors_r on host jas@bagelpi"
+# FIXME: Killing this ssh does not kill the remote process.
+# A double -t -t option to ssh forces creation of a virtual terminal, which
+# fixes the problem, but then the ssh command does not execute. The remote
+# federate does not start!
+ssh jas@bagelpi '
+    cd LinguaFrancaRemote; \
+    echo "Executing: ~/LinguaFrancaRemote/Bagel/bin/federate__sensors_r -i '$FEDERATION_ID'" 2>&1 | tee -a ~/LinguaFrancaRemote/Bagel/log/federate__sensors_r.log; 
+    ~/LinguaFrancaRemote/Bagel/bin/federate__sensors_r -i '$FEDERATION_ID' 2>&1 | tee -a ~/LinguaFrancaRemote/Bagel/log/federate__sensors_r.log' &
+pids[1]=$!
+echo "#### Launching the federate federate__magnet_r on host jas@bagelpi"
+# FIXME: Killing this ssh does not kill the remote process.
+# A double -t -t option to ssh forces creation of a virtual terminal, which
+# fixes the problem, but then the ssh command does not execute. The remote
+# federate does not start!
+ssh jas@bagelpi '
+    cd LinguaFrancaRemote; \
+    echo "Executing: ~/LinguaFrancaRemote/Bagel/bin/federate__magnet_r -i '$FEDERATION_ID'" 2>&1 | tee -a ~/LinguaFrancaRemote/Bagel/log/federate__magnet_r.log; 
+    ~/LinguaFrancaRemote/Bagel/bin/federate__magnet_r -i '$FEDERATION_ID' 2>&1 | tee -a ~/LinguaFrancaRemote/Bagel/log/federate__magnet_r.log' &
+pids[2]=$!
+echo "#### Launching the federate federate__trigger on host sdn1"
+# FIXME: Killing this ssh does not kill the remote process.
+# A double -t -t option to ssh forces creation of a virtual terminal, which
+# fixes the problem, but then the ssh command does not execute. The remote
+# federate does not start!
+ssh sdn1 '
+source /usr/local/mdsplus/setup.sh
+    cd LinguaFrancaRemote; \
+    echo "Executing: ~/LinguaFrancaRemote/Bagel/bin/federate__trigger -i '$FEDERATION_ID'" 2>&1 | tee -a ~/LinguaFrancaRemote/Bagel/log/federate__trigger.log; 
+    ~/LinguaFrancaRemote/Bagel/bin/federate__trigger -i '$FEDERATION_ID' 2>&1 | tee -a ~/LinguaFrancaRemote/Bagel/log/federate__trigger.log' &
+pids[3]=$!
+echo "#### Launching the federate federate__controller on host sdn1"
+# FIXME: Killing this ssh does not kill the remote process.
+# A double -t -t option to ssh forces creation of a virtual terminal, which
+# fixes the problem, but then the ssh command does not execute. The remote
+# federate does not start!
+ssh sdn1 '
+source /usr/local/mdsplus/setup.sh
+    cd LinguaFrancaRemote; \
+    echo "Executing: ~/LinguaFrancaRemote/Bagel/bin/federate__controller -i '$FEDERATION_ID'" 2>&1 | tee -a ~/LinguaFrancaRemote/Bagel/log/federate__controller.log; 
+    ~/LinguaFrancaRemote/Bagel/bin/federate__controller -i '$FEDERATION_ID' 2>&1 | tee -a ~/LinguaFrancaRemote/Bagel/log/federate__controller.log' &
+pids[4]=$!
+echo "#### Launching the federate federate__sig_writer on host sdn1"
+# FIXME: Killing this ssh does not kill the remote process.
+# A double -t -t option to ssh forces creation of a virtual terminal, which
+# fixes the problem, but then the ssh command does not execute. The remote
+# federate does not start!
+ssh sdn1 '
+source /usr/local/mdsplus/setup.sh
+    cd LinguaFrancaRemote; \
+    echo "Executing: ~/LinguaFrancaRemote/Bagel/bin/federate__sig_writer -i '$FEDERATION_ID'" 2>&1 | tee -a ~/LinguaFrancaRemote/Bagel/log/federate__sig_writer.log; 
+    ~/LinguaFrancaRemote/Bagel/bin/federate__sig_writer -i '$FEDERATION_ID' 2>&1 | tee -a ~/LinguaFrancaRemote/Bagel/log/federate__sig_writer.log' &
+pids[5]=$!
+echo "RTI has exited. Wait for federates to exit."
+# Wait for launched processes to finish.
+# The errors are handled separately via trap.
+for pid in "${pids[@]}"
+do
+    wait $pid || exit $?
+done
+echo "All done."
+EXITED_SUCCESSFULLY=true
