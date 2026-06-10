@@ -1,0 +1,42 @@
+target CCPP {
+    keepalive: true,
+    clock-sync: on
+}
+
+import MdsPutSignal  from "MdsPutSignal.lf"
+
+
+reactor MDSPutSignals {
+    input current_in: float;
+    input [4] heights_in: uint8_t;
+    input demand_in: float;
+    input op_start_time: instant_t;
+    state start_time: instant_t;
+
+    preamble {=
+        float CurrentExperimentTime(instant_t start_time, instant_t ltime)
+        {
+            return (float)(ltime - start_time)*1E-9;
+        }
+    =}
+//    heights_writer = new MdsPutSignal(host="", treename="lfbagel", shot=0, path="\\LFBAGEL::TOP.SIGNALS:HEIGHTS", first_time=-3.0)
+    current_writer = new MdsPutSignal(host="", treename="lfbagel", shot=0, path="\\LFBAGEL::TOP.SIGNALS:CURRENT", first_time=-3.0)
+    demand_writer  = new MdsPutSignal(host="", treename="lfbagel", shot=0, path="\\LFBAGEL::TOP.SIGNALS:DEMAND", first_time=-3.0)
+
+    reaction(op_start_time) {=
+        printf("MDSPutSignals got op_start_time %ld\n", op_start_time->value);
+        fflush(stdout);
+        self->start_time = op_start_time->value;
+    =}
+
+    reaction(demand_in) ->demand_writer.signal_value, demand_writer.time_value {=
+        lf_set(demand_writer.signal_value, demand_in->value);
+        lf_set(demand_writer.time_value, CurrentExperimentTime(self->start_time, lf_time_logical()));
+    =}
+    
+    reaction(current_in) ->current_writer.signal_value, current_writer.time_value {=
+        lf_set(current_writer.signal_value, current_in->value);
+        lf_set(current_writer.time_value, CurrentExperimentTime(self->start_time, lf_time_logical()));
+    =}
+}
+
